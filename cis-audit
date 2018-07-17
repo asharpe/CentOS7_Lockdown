@@ -59,16 +59,18 @@ ISSUE='/etc/issue'
 ISSUE_NET='/etc/issue.net'
 BANNER_MSG='/etc/dconf/db/gdm.d/01-banner-message'
 
-auto_pass=()
+autopass=()
+excluded=()
 
 function usage() {
 	cat <<-EOF
-		Usage: $0 [-h|--help] [-a|--autopass test-name] [-l|--list] [test-name [test-name ...]]
+		Usage: $0 [-h|--help] [-a|--autopass test-name] [-e|--exclude test-name] [-l|--list] [test-name [test-name ...]]
 
 		-h		This message
 		-a		Auto pass test named "test-name"
+		-e		Exclude test named "test-name" entirely
 		-l		List tests
-		test-name Run this test (can be used multiple times)
+		test-name 	The CIS number for a test (can be used multiple times)
 	EOF
 }
 
@@ -76,8 +78,9 @@ function parse_options() {
 	while (($#))
 	do
 		case "$1" in
-			-h|--help|-?) usage; exit 0;;
+			-h|--help|-\?) usage; exit 0;;
 			-a|--autopass) autopass+=("$2"); shift;;
+			-e|--exclude) excluded+=("$2"); shift;;
 		esac
 
 		shift
@@ -1034,33 +1037,48 @@ function duplicate_groupnames {
 }
 
 function func_wrapper {
-	local pretty_name
+	local pretty_name auto_pass=0 infowidth=40
 
 	if [[ "$1" == "-n" ]]
 	then
-		pretty_name="$2"
-		shift
-		shift
+		cis_number="$2"
+		shift 2
 	fi
 
-	func_name=$1
+	func_name="$1"
 	shift
 	args=("$@")
 
-	if [[ -n $pretty_name ]]
+	if [[ -n $cis_number ]]
 	then
-		printf "CIS %-10s " $pretty_name
+		printf "CIS %-10s " $cis_number
+
+		for test in "${autopass[@]}"
+		do
+			[[ $test == $cis_number ]] && {
+				auto_pass=1
+			}
+		done
 	fi
 
 	case "$func_name" in
-		todo) echo "TODO";;
+		todo) printf "%-${infowidth}s TODO\n" " ";;
 		*)
-			echo -n "$func_name ${args[@]}"
+			local info="$func_name ${args[*]}"
+			(( ${#info} > infowidth )) && info="${info:0:$((infowidth-1))}…"
+			printf "%-${infowidth}s " "$info"
+
+			if ((auto_pass))
+			then
+				echo AUTOPASS
+				return
+			fi
+
 			if ${func_name} "${args[@]}"
 			then
-				echo " OK"
+				echo OK
 			else
-				echo " ERROR"
+				echo ERROR
 			fi
 		;;
 	esac
@@ -1143,16 +1161,26 @@ tests=(
 )
 
 function new_main() {
+	echo "Auto-passing: ${autopass[@]}"
+	echo "Excluding: ${excluded[@]}"
+
 	for test in "${tests[@]}"
 	do
-		IFS=$':' read prettyname name arg <<<"$test"
+		IFS=$':' read cis_number name arg <<<"$test"
 		IFS=$'\t' read -a args <<<"$arg"
+
+		for test in "${excluded[@]}"
+		do
+			[[ $test == $cis_number ]] && {
+				continue 2
+			}
+		done
 
 		if ((list))
 		then
-			echo $prettyname
+			echo $cis_number "$name" "${args[@]}"
 		else
-			func_wrapper -n "$prettyname" "$name" "${args[@]}"
+			func_wrapper -n "$cis_number" "$name" "${args[@]}"
 		fi
 	done
 }
