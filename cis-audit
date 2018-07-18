@@ -61,6 +61,7 @@ BANNER_MSG='/etc/dconf/db/gdm.d/01-banner-message'
 
 autopass=()
 excluded=()
+requested=()
 
 function usage() {
 	cat <<-EOF
@@ -81,6 +82,7 @@ function parse_options() {
 			-h|--help|-\?) usage; exit 0;;
 			-a|--autopass) autopass+=("$2"); shift;;
 			-e|--exclude) excluded+=("$2"); shift;;
+			*) requested+=("$1");;
 		esac
 
 		shift
@@ -1164,6 +1166,8 @@ function new_main() {
 	echo "Auto-passing: ${autopass[@]}"
 	echo "Excluding: ${excluded[@]}"
 
+	local only_requested=${#requested[@]}
+
 	for test in "${tests[@]}"
 	do
 		IFS=$':' read cis_number name arg <<<"$test"
@@ -1175,6 +1179,17 @@ function new_main() {
 				continue 2
 			}
 		done
+
+		if ((only_requested))
+		then
+			local do_it=0
+			for test in "${requested[@]}"
+			do
+				[[ $test == $cis_number ]] && do_it=1
+			done
+
+			((do_it)) || continue
+		fi
 
 		if ((list))
 		then
