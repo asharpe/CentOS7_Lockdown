@@ -168,9 +168,12 @@ function verify_selinux_policy {
 }
 
 function rpm_not_installed {
-  # Check that the supplied rpm $1 is not installed
-  local rpm="${1}"
-  rpm -q ${rpm} | grep -q "package ${rpm} is not installed" || return
+  # Check that the supplied rpm(s) is not installed
+	local package
+	for package
+	do
+		rpm -q "$package" | grep -q "package ${package} is not installed" || return 1
+	done
 }
 
 function unconfined_procs {
@@ -216,17 +219,23 @@ function check_boot_pass {
 }
 
 function check_svc_not_enabled {
-  # Verify that the service $1 is not enabled
-  local service="$1" 
-  systemctl list-unit-files | grep -qv "${service}" && return 
-  systemctl is-enabled "${service}" | grep -q 'enabled' || return
+  # Verify that the service(s) is not enabled
+	local service
+	for service
+	do
+		systemctl list-unit-files | grep -q "${service}" || return 0
+		systemctl is-enabled "${service}" 2>/dev/null | grep -q 'enabled' && return 1
+	done
 }
 
 function check_svc_enabled {
-  # Verify that the service $1 is enabled
-  local service="$1" 
-  systemctl list-unit-files | grep -q "${service}.service" || return 
-  systemctl is-enabled "${service}" | grep -q 'enabled' && return
+  # Verify that the service(s) is enabled
+  local service
+  for service
+  do
+    systemctl list-unit-files | grep -q "${service}.service" || return 1
+    systemctl is-enabled "${service}" 2>&1 | grep -q 'enabled' || return 1
+  done
 }
 
 function ntp_cfg {
