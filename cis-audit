@@ -151,7 +151,7 @@ function yum_gpgcheck {
 
 function yum_update {
 	# Check for outstanding pkg update with yum
-	yum -q check-update || return
+	yum -q check-update >/dev/null || return
 }
 
 function pkg_integrity {
