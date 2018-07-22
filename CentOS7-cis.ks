@@ -346,6 +346,15 @@ if [[ "${root_gid}" -ne 0 ]] ; then
   usermod -g 0 root							# CIS 5.4.3
 fi
 
+# CIS 3.1
+if ! grep -q '^[[:space:]]*umask'
+then
+  cat <<-EOF >>/etc/sysconfig/init
+		# CIS 3.1
+		umask 027
+  EOF
+fi
+
 # CIS 5.4.4
 bashrc='/etc/bashrc'
 #first umask cmd sets it for users, second umask cmd sets it for system reserved uids
@@ -354,7 +363,7 @@ line_num=$(grep -n "^[[:space:]]*umask" ${bashrc} | head -1 | cut -d: -f1)
 sed -i ${line_num}s/002/027/ ${bashrc}
 
 bashprofile='/etc/profile'
-line_num=$(grep -n "^[[:space:]]*umask" ${bashrc} | head -1 | cut -d: -f1)
+line_num=$(grep -n "^[[:space:]]*umask" ${bashprofile} | head -1 | cut -d: -f1)
 sed -i ${line_num}s/002/027/ ${bashprofile}
 
 # CIS 5.5
