@@ -392,22 +392,35 @@ function new_main() {
 		fi
 	done
 
-	cat <<-EOF
-
-		Level 1 Compliance: $((level_1_pass * 100 / level_1_count))%
-		  Pass: $level_1_pass
-		  Fail: $level_1_fail
-		  TODO: $level_1_todo
-
-		Level 2 Compliance: $((level_2_pass * 100 / level_2_count))%
-		  Pass: $level_2_pass
-		  Fail: $level_2_fail
-		  TODO: $level_2_todo
+	((level_1_count)) && print_compliance 1
+	((level_2_count)) && print_compliance 2
+	((level_1_count)) && ((level_2_count)) && cat <<-EOF
 
 		Overall Compliance: $(( (level_1_pass + level_2_pass) * 100 / (level_1_count + level_2_count) ))%
 		  Pass: $((level_1_pass + level_2_pass))
 		  Fail: $((level_1_fail + level_2_fail))
 		  TODO: $((level_1_todo + level_2_todo))
+	EOF
+}
+
+function print_compliance {
+	local level="$1"
+	local count_var=level_${level}_count
+	local pass_var=level_${level}_pass
+	local fail_var=level_${level}_fail
+	local todo_var=level_${level}_todo
+
+	local count=${!count_var}
+	local pass=${!pass_var}
+	local fail=${!fail_var}
+	local todo=${!todo_var}
+
+	cat <<-EOF
+
+		Level $level Compliance: $((pass * 100 / count))%
+		  Pass: $pass
+		  Fail: $fail
+		  TODO: $todo
 	EOF
 }
 

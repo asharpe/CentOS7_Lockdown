@@ -112,7 +112,7 @@ function test_module_disabled {
 	# Test that the install command for the supplied kernel module is /bin/true
 
 	local module="${1}"
-	modprobe -n -v ${module} | grep -q "install \+/bin/true" || return
+	modprobe -n -v ${module} 2>/dev/null | grep -q "install \+/bin/true" || return
 
 	lsmod | grep -qv "${module}" || return
 }
@@ -130,7 +130,7 @@ function yum_gpgcheck {
 
 function yum_update {
 	# Check for outstanding pkg update with yum
-	yum -q check-update >/dev/null || return
+	yum -q check-update >/dev/null 2>&1 || return
 }
 
 function pkg_integrity {
@@ -151,7 +151,7 @@ function rpm_installed {
 
 function verify_aide_cron {
 	# Verify there is a cron job scheduled to run the aide check
-	crontab -u root -l | cut -d\# -f1 | grep -q "aide \+--check" || return
+	crontab -u root -l 2>/dev/null | cut -d\# -f1 | grep -q "aide \+--check" || return
 }
 
 function verify_selinux_grubcfg {
@@ -1066,7 +1066,7 @@ function ntp_is_configured {
 	while read count
 	do
 		let "user_count+=$count"
-	done < <(egrep -c "(OPTIONS|ExecStart).*ntp:ntp" /etc/sysconfig/ntpd /usr/lib/systemd/system/ntpd.service)
+	done < <(egrep -hc "(OPTIONS|ExecStart).*ntp:ntp" /etc/sysconfig/ntpd /usr/lib/systemd/system/ntpd.service)
 	ge 1 $restrict_count $server_count $user_count
 }
 
@@ -1444,6 +1444,7 @@ function check_rsyslog_configured {
 }
 
 function check_rsyslog_permissions {
+	rpm_installed rsyslog || return 0
 	local perm=$(awk '$1 == "$FileCreateMode" {print $NF}' /etc/rsyslog.conf)
 
 	# verify that $FileCreateMode is 0640 or more restrictive
@@ -1451,6 +1452,7 @@ function check_rsyslog_permissions {
 }
 
 function check_rsyslog_remote {
+	rpm_installed rsyslog || return 0
 	# Review the /etc/rsyslog.conf file and verify that logs are sent to a central host
 
 	# this just checks for ANY remote logging, not a specific target
@@ -1459,6 +1461,7 @@ function check_rsyslog_remote {
 }
 
 function check_rsyslog_remote_accepted {
+	rpm_installed rsyslog || return 0
 	# Run the following commands and verify the resulting lines are uncommented on designated log hosts and commented or removed on all others
 
 	# most servers want these commented
@@ -1477,6 +1480,8 @@ function check_syslog_ng_configured {
 }
 
 function check_syslog_ng_permissions {
+	rpm_installed syslog-ng || return 0
+
 	# verify the perm option is 0640 or more restrictive
 
 	local perms=$(grep -c 'perm(0640)' /etc/syslog-ng/syslog-ng.conf)
@@ -1485,6 +1490,8 @@ function check_syslog_ng_permissions {
 }
 
 function check_syslog_ng_remote {
+	rpm_installed syslog-ng || return 0
+
 	# Review the /etc/syslog-ng/syslog-ng.conf file and verify that logs are sent to a central host
 
 	# TODO this check is bogus, it doesn't distinguish between source and destination
@@ -1495,6 +1502,8 @@ function check_syslog_ng_remote {
 }
 
 function check_syslog_ng_remote_accepted {
+	rpm_installed syslog-ng || return 0
+
 	# TODO this check is bogus, it doesn't distinguish between source and destination
 
 	local remote_lines=$(egrep -c "tcp" /etc/syslog-ng/syslog-ng.conf)
@@ -1655,7 +1664,7 @@ function check_root_login_console {
 		tty1
 	)
 
-	local bad_consoles=$(egrep -v "$(IFS='|'; echo "${allowed_consoles[*]}")" /etc/securetty)
+	local bad_consoles=$(egrep -vc "$(IFS='|'; echo "${allowed_consoles[*]}")" /etc/securetty)
 	(( ! bad_consoles ))
 }
 
