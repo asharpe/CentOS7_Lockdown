@@ -19,6 +19,17 @@ source $(dirname -- "$0")/test-functions.sh
 autopass=()
 excluded=()
 requested=()
+todo=0
+level_1_count=0
+level_1_scored=0
+level_1_pass=0
+level_1_fail=0
+level_1_todo=0
+level_2_count=0
+level_2_scored=0
+level_2_pass=0
+level_2_fail=0
+level_2_todo=0
 
 function usage() {
 	cat <<-EOF
@@ -48,7 +59,7 @@ function parse_options() {
 
 
 function func_wrapper {
-	local auto_pass=0 infowidth=40
+	local auto_pass=0 infowidth=60
 
 	if [[ "$1" == "-n" ]]
 	then
@@ -76,6 +87,8 @@ function func_wrapper {
 
 	case "$func_name" in
 		todo)
+			((++todo))
+			((cis_level > 0)) && let "level_${cis_level}_todo++"
 			local info="${args[*]}"
 			(( ${#info} > infowidth )) && info="${info:0:$((infowidth-1))}…"
 			printf "%-${infowidth}s TODO\n" "$info"
@@ -88,14 +101,15 @@ function func_wrapper {
 			if ((auto_pass))
 			then
 				echo AUTOPASS
-				return
-			fi
+				return 0
 
-			if ${func_name} "${args[@]}"
+			elif ${func_name} "${args[@]}"
 			then
 				echo OK
+
 			else
 				echo FAIL
+				return 1
 			fi
 		;;
 	esac
@@ -111,19 +125,18 @@ tests=(
 	$'1.1.1.7:1:test_disable_mounting:udf'
 	$'1.1.1.8:1:test_disable_mounting:fat'
 
-	$'1.1.2:1:separate_partition:/tmp'
+	$'1.1.2:2:separate_partition:/tmp'
 	$'1.1.3:1:mount_option:/tmp\tnodev'
 	$'1.1.4:1:mount_option:/tmp\tnosuid'
 	$'1.1.5:1:mount_option:/tmp\tnoexec'
-	$'1.1.6:1:separate_partition:/var'
-	$'1.1.7:1:separate_partition:/var/tmp'
+	$'1.1.6:2:separate_partition:/var'
+	$'1.1.7:2:separate_partition:/var/tmp'
 	$'1.1.8:1:mount_option:/var/tmp\tnodev'
 	$'1.1.9:1:mount_option:/var/tmp\tnosuid'
 	$'1.1.10:1:mount_option:/var/tmp\tnoexec'
-
-	$'1.1.11:1:separate_partition:/var/log'
-	$'1.1.12:1:separate_partition:/var/log/audit'
-	$'1.1.13:1:separate_partition:/home'
+	$'1.1.11:2:separate_partition:/var/log'
+	$'1.1.12:2:separate_partition:/var/log/audit'
+	$'1.1.13:2:separate_partition:/home'
 	$'1.1.14:1:mount_option:/home\tnodev'
 	$'1.1.15:1:mount_option:/dev/shm\tnodev'
 	$'1.1.16:1:mount_option:/dev/shm\tnosuid'
@@ -131,13 +144,11 @@ tests=(
 	$'1.1.18:-1:todo:nodev on removable media'
 	$'1.1.19:-1:todo:nosuid on removable media'
 	$'1.1.20:-1:todo:noexec on removable media'
-
 	$'1.1.21:1:sticky_wrld_w_dirs'
 	$'1.1.22:1:check_svc_not_enabled:autofs'
 
-
-	$'1.2.1:1:todo:yum repos'
-	$'1.2.2:1:centos_gpg_key_installed'
+	$'1.2.1:-1:todo:yum repos'
+	$'1.2.2:-1:centos_gpg_key_installed'
 	$'1.2.3:1:yum_gpgcheck'
 
 	$'1.3.1:1:rpm_installed:aide'
@@ -152,21 +163,21 @@ tests=(
 	$'1.5.3:1:chk_sysctl:kernel.randomize_va_space\t2'
 	$'1.5.4:1:todo:prelink'
 
-	$'1.6.1.1:1:verify_selinux_grubcfg'
-	$'1.6.1.2:1:verify_selinux_state'
-	$'1.6.1.3:1:verify_selinux_policy'
-	$'1.6.1.4:1:rpm_not_installed:setroubleshoot'
-	$'1.6.1.5:1:rpm_not_installed:mcstrans'
-	$'1.6.1.6:1:unconfined_procs'
-	$'1.6.2:1:rpm_installed:libselinux'
+	$'1.6.1.1:2:verify_selinux_grubcfg'
+	$'1.6.1.2:2:verify_selinux_state'
+	$'1.6.1.3:2:verify_selinux_policy'
+	$'1.6.1.4:2:rpm_not_installed:setroubleshoot'
+	$'1.6.1.5:2:rpm_not_installed:mcstrans'
+	$'1.6.1.6:2:unconfined_procs'
+	$'1.6.2:2:rpm_installed:libselinux'
 
 	$'1.7.1.1:1:check_disallowed_expansions:/etc/motd'
-	$'1.7.1.2:1:check_disallowed_expansions:/etc/issue'
-	$'1.7.1.3:1:check_disallowed_expansions:/etc/issue.net'
+	$'1.7.1.2:-1:check_disallowed_expansions:/etc/issue'
+	$'1.7.1.3:-1:check_disallowed_expansions:/etc/issue.net'
 
-	$'1.7.1.4:1:check_owner_group_perms:/etc/motd\t0\t0\t644'
+	$'1.7.1.4:-1:check_owner_group_perms:/etc/motd\t0\t0\t644'
 	$'1.7.1.5:1:check_owner_group_perms:/etc/issue\t0\t0\t644'
-	$'1.7.1.6:1:check_owner_group_perms:/etc/issue.net\t0\t0\t644'
+	$'1.7.1.6:-1:check_owner_group_perms:/etc/issue.net\t0\t0\t644'
 
 	$'1.7.2:1:gdm_login_banner'
 
@@ -226,7 +237,7 @@ tests=(
 
 	$'3.3.1:1:reject_ipv6_router_advertisements'
 	$'3.3.2:1:reject_ipv6_redirects'
-	$'3.3.3:1:ipv6_disabled'
+	$'3.3.3:-1:ipv6_disabled'
 
 	$'3.4.1:1:rpm_installed:tcp_wrappers'
 	$'3.4.2:1:check_hosts_allow'
@@ -245,40 +256,40 @@ tests=(
 	$'3.6.4:-1:check_firewall_outbound'
 	$'3.6.5:1:check_firewall_services'
 
-	$'3.7.1:-1:check_wireless_interfaces'
+	$'3.7:-1:check_wireless_interfaces'
 
-	$'4.1.1.1:-1:check_audit_log_size'
-	$'4.1.1.2:1:check_audit_log_full_action'
-	$'4.1.1.3:1:check_audit_log_deletion'
+	$'4.1.1.1:-2:check_audit_log_size'
+	$'4.1.1.2:2:check_audit_log_full_action'
+	$'4.1.1.3:3:check_audit_log_deletion'
 
-	$'4.1.2:1:check_svc_enabled:auditd'
-	$'4.1.3:1:check_boot_audit'
-	$'4.1.4:1:check_audit_time_changes'
-	$'4.1.5:1:check_audit_user_group_changes'
-	$'4.1.6:1:check_audit_net_changes'
-	$'4.1.7:1:check_audit_mac_policy_changes'
-	$'4.1.8:1:check_audit_login'
-	$'4.1.9:1:check_audit_session'
-	$'4.1.10:1:check_audit_perm_changes'
-	$'4.1.11:1:check_audit_login_failure'
-	$'4.1.12:1:check_audit_privileged_commands'
-	$'4.1.13:1:check_audit_mounts'
-	$'4.1.14:1:check_audit_deletes'
-	$'4.1.15:1:check_audit_sudoers'
-	$'4.1.16:1:check_audit_sudo_log'
-	$'4.1.17:1:check_audit_modules'
-	$'4.1.18:1:check_audit_immutable'
+	$'4.1.2:2:check_svc_enabled:auditd'
+	$'4.1.3:2:check_boot_audit'
+	$'4.1.4:2:check_audit_time_changes'
+	$'4.1.5:2:check_audit_user_group_changes'
+	$'4.1.6:2:check_audit_net_changes'
+	$'4.1.7:2:check_audit_mac_policy_changes'
+	$'4.1.8:2:check_audit_login'
+	$'4.1.9:2:check_audit_session'
+	$'4.1.10:2:check_audit_perm_changes'
+	$'4.1.11:2:check_audit_login_failure'
+	$'4.1.12:2:check_audit_privileged_commands'
+	$'4.1.13:2:check_audit_mounts'
+	$'4.1.14:2:check_audit_deletes'
+	$'4.1.15:2:check_audit_sudoers'
+	$'4.1.16:2:check_audit_sudo_log'
+	$'4.1.17:2:check_audit_modules'
+	$'4.1.18:2:check_audit_immutable'
 
 	# This section only applies if rsyslog is installed on the system.
 	$'4.2.1.1:1:check_svc_enabled:rsyslog'
-	$'4.2.1.2:1:check_rsyslog_configured'
+	$'4.2.1.2:-1:check_rsyslog_configured'
 	$'4.2.1.3:1:check_rsyslog_permissions'
 	$'4.2.1.4:1:check_rsyslog_remote'
 	$'4.2.1.5:-1:check_rsyslog_remote_accepted'
 
 	# This section only applies if syslog-ng is installed on the system.
 	$'4.2.2.1:1:check_svc_enabled:syslog-ng'
-	$'4.2.2.2:1:check_syslog_ng_configured'
+	$'4.2.2.2:-1:check_syslog_ng_configured'
 	$'4.2.2.3:1:check_syslog_ng_permissions'
 	$'4.2.2.4:-1:check_syslog_ng_remote'
 	$'4.2.2.5:-1:check_syslog_ng_remote_accepted'
@@ -314,7 +325,6 @@ tests=(
 	$'5.2.15:1:check_ssh_access'
 	$'5.2.16:1:check_ssh_banner'
 
-	#$'5.3.1:1:check_pam_password_requirements'
 	$'5.3.1:1:todo:pam password requirements'
 	$'5.3.2:1:todo:pam password failures'
 	$'5.3.3:1:todo:pam password reuse'
@@ -339,6 +349,7 @@ function new_main() {
 	echo "Excluding: ${excluded[@]}"
 
 	local only_requested=${#requested[@]}
+	local count=0
 
 	for test in "${tests[@]}"
 	do
@@ -368,10 +379,36 @@ function new_main() {
 		then
 			echo $cis_number "$name" "${args[@]}"
 		else
+			((++count))
+
+			((level > 0)) && let "level_${level}_count++"
 #			func_wrapper -n "$cis_number" "$name" "${args[@]}"
-			func_wrapper -n "$cis_number" "$level" "$name" "${args[@]}"
+			if func_wrapper -n "$cis_number" "$level" "$name" "${args[@]}"
+			then
+				((level > 0)) && let "level_${level}_pass++"
+			else
+				((level > 0)) && let "level_${level}_fail++"
+			fi
 		fi
 	done
+
+	cat <<-EOF
+
+		Level 1 Compliance: $((level_1_pass * 100 / level_1_count))%
+		  Pass: $level_1_pass
+		  Fail: $level_1_fail
+		  TODO: $level_1_todo
+
+		Level 2 Compliance: $((level_2_pass * 100 / level_2_count))%
+		  Pass: $level_2_pass
+		  Fail: $level_2_fail
+		  TODO: $level_2_todo
+
+		Overall Compliance: $(( (level_1_pass + level_2_pass) * 100 / (level_1_count + level_2_count) ))%
+		  Pass: $((level_1_pass + level_2_pass))
+		  Fail: $((level_1_fail + level_2_fail))
+		  TODO: $((level_1_todo + level_2_todo))
+	EOF
 }
 
 
