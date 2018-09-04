@@ -292,10 +292,6 @@ function sticky_wrld_w_dirs {
 	[[ -z "${dirs}" ]] || return
 }
 
-function check_umask {
-	cut -d\# -f1 /etc/sysconfig/init | grep -q "umask[[:space:]]027" || return
-}
-
 function check_def_tgt {
 	#Check that the default boot target is multi-user.target
 	local default_tgt
@@ -1648,6 +1644,7 @@ function check_ssh_banner {
 }
 
 function check_umask {
+	# cut -d\# -f1 /etc/sysconfig/init | grep -q "umask[[:space:]]027" || return
 	local bad_umasks=$(grep -h '^\s*umask' /etc/bashrc /etc/profile | grep -v 027 | wc -l)
 	(( ! bad_umasks ))
 }
