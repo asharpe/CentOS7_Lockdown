@@ -136,8 +136,8 @@ net.ipv4.conf.default.rp_filter = 1			# CIS 3.2.7
 net.ipv4.tcp_syncookies = 1				# CIS 3.2.8
 net.ipv6.conf.all.accept_ra = 0				# CIS 3.3.1
 net.ipv6.conf.default.accept_ra = 0 			# CIS 3.3.1
-net.ipv6.conf.all.accept_redirect = 0			# CIS 3.3.2
-net.ipv6.conf.default.accept_redirect = 0		# CIS 3.3.2
+net.ipv6.conf.all.accept_redirects = 0			# CIS 3.3.2
+net.ipv6.conf.default.accept_redirects = 0		# CIS 3.3.2
 net.ipv6.conf.all.disable_ipv6 = 1			# CIS 3.3.3
 EOF
 
